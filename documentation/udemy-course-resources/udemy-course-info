@@ -1,0 +1,111 @@
+Repository URL: 
+https://github.com/wardviaene/docker-demo
+https://github.com/wardviaene/jenkins-course
+
+
+Installation URL:
+www.virtualbox.org
+www.vagrantup.com
+https://docs.docker.com/docker-for-windows/
+https://docs.docker.com/docker-for-mac/
+
+
+Installation methods
+• On the Cloud using docker (works on AWS, DigitalOcean, Google Cloud, Azure) 
+• www.virtualbox.org can run ubuntu in a VM locally 
+• www.vagrantup.com together with virtualbox can spin up a running ubuntu instance in minutes 
+(see my other DevOps course for an introduction to Vagrant) 
+• Docker for windows can run docker on a windows PC (https://docs.docker.com/docker-for
+windows/) 
+• Docker for mac can run docker on a mac (https://docs.docker.com/docker-for-mac/) 
+• Jenkins is written in java, so you can also run it without docker on any OS 
+• Still I recommend docker for this course 
+• Even when using linux and docker, you can still run jenkins slaves on Microsoft Windows to 
+build applications that need a Microsoft Windows OS
+
+
+
+Jenkins Job DSL
+ • An example (npm install)
+ job('NodeJS example') { 
+    scm { 
+        git('git://github.com/wardviaene/docker-demo.git') {  node -> 
+            node / gitConfigName('DSL User') 
+            node / gitConfigEmail('jenkins-dsl@newtech.academy') 
+        } 
+    } 
+    triggers { 
+        scm('H/5 * * * *') 
+    } 
+    wrappers { 
+        nodejs('nodejs') // this is the name of the NodeJS installation in  
+                         // Manage Jenkins -> Configure Tools -> NodeJS Installations -> Name 
+    } 
+    steps { 
+        shell("npm install") 
+    } 
+} 
+
+
+
+
+Jenkins Pipelines Example
+ node { 
+   def mvnHome 
+   stage('Preparation') { 
+      git ‘https://github.com/wardviaene/java-demo.git' 
+      // Get the Maven tool. 
+      // ** NOTE: This 'M3' Maven tool must be configured 
+      // **       in the global configuration.            
+      mvnHome = tool 'M3' 
+   } 
+   stage('Build') { 
+      // Run the maven build 
+      if (isUnix()) { 
+         sh "'${mvnHome}/bin/mvn' -Dmaven.test.failure.ignore 
+			clean package" 
+      } else { 
+         bat(/"${mvnHome}\bin\mvn" -Dmaven.test.failure.ignore 
+			clean package/) 
+      } 
+   } 
+   stage('Results') { 
+      junit '**/target/surefire-reports/TEST-*.xml' 
+      archive 'target/*.jar' 
+   } 
+}
+
+
+
+ssh-agent
+ node { 
+  stage(“do something with git") {   
+  sshagent (credentials: ['github key']) { 
+    // get the last commit id from a repository you own 
+    sh “git ls-remote -h --refs git@github.com:wardviaene/jenkins-course.git master |awk '{print $1}’” 
+  } 
+}
+
+
+
+Security
+ • What do to when you lock yourself out?
+ 	$ docker stop jenkins 
+	$ # edit /var/jenkins_home/config.xml 
+	$ docker start jenkin
+	
+	
+Option 1:
+Make sure you have: 
+<useSecurity>false</useSecurity> 
+And remove all  
+<authorizationStrategy> references
+
+Option 2:
+ <authorizationStrategy class=”
+ hudson.security.ProjectMatrixAuthorizationStrategy”> 
+<permission>hudson.model.Hudson.Administer:YOUR-USER</permission> 
+</authorizationStrategy>
+
+One of the best hosted solutions is 
+onelogin.com
